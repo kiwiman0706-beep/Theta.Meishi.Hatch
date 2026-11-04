@@ -76,6 +76,7 @@ public final class Pipeline {
   public static class Summary {
     int read, registered, updated, failed, review, nenga, logos, noLogo, kana;
     boolean halted;
+    String haltReason = "";
     final List<String> errors = new ArrayList<>();
 
     public String text() {
@@ -89,8 +90,16 @@ public final class Pipeline {
       if (updated > 0) b.append(b.length() > 0 ? " / " : "").append("連絡先を更新 ").append(updated).append("件");
       if (review > 0) b.append(b.length() > 0 ? " / " : "").append("要確認 ").append(review).append("件");
       if (failed > 0) b.append(b.length() > 0 ? " / " : "").append("失敗 ").append(failed).append("件");
-      if (halted) b.append("\n利用上限または認証エラーのため一時停止しました。");
+      if (halted) b.append(b.length() > 0 ? "\n" : "").append("一時停止しました：").append(haltReason);
       return b.length() == 0 ? "処理する名刺はありませんでした" : b.toString();
+    }
+  }
+
+  // Why the queue stopped, for the screen (cleared by "再開" or the next answer from Gemini).
+  static void halt(Context c, String kind, String advice, String detail) {
+    try {
+      prefs(c).edit().putString("geminiHalt", new JSONObject().put("kind", kind).put("text", advice).put("detail", detail).put("at", System.currentTimeMillis()).toString()).apply();
+    } catch (JSONException ignored) {
     }
   }
 
@@ -99,6 +108,8 @@ public final class Pipeline {
     Summary sum = new Summary();
     Gemini g = null;
     Set<String> tried = new HashSet<>();
+    int waits = 0;
+    prefs(c).edit().remove("geminiHalt").apply(); // trying again: set again if it still fails
     while (true) {
       JSONObject next = null;
       JSONArray a = s.snapshot().getJSONArray("people");
@@ -215,10 +226,24 @@ public final class Pipeline {
         }
       } catch (Exception e) {
         String m = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-        if (m.contains("HTTP 429") || m.contains("HTTP 401") || m.contains("HTTP 403") || m.contains("APIキー")) {
-          // Leave the queue intact: the next run (after the quota resets or the key is fixed) resumes.
+        Gemini.Failure f = e instanceof Gemini.Failure ? (Gemini.Failure) e : null;
+        // The per-minute limit: wait as long as Google says, then the same card again.
+        if (f != null && f.kind.equals("minute") && waits < 4) {
+          waits++;
+          int sec = Math.max(10, Math.min(f.retrySeconds > 0 ? f.retrySeconds : 30, 70));
+          for (int t = sec; t > 0; t--) {
+            progress.update("Geminiの1分あたりの上限のため待っています（あと" + t + "秒）");
+            Thread.sleep(1000);
+          }
+          tried.remove(id + queue);
+          continue;
+        }
+        if ((f != null && f.stopsAll()) || (f == null && m.contains("APIキー"))) {
+          // Leave the queue intact: "再開" (after the quota resets or the key is fixed) resumes.
           sum.halted = true;
+          sum.haltReason = f != null ? Gemini.advice(f.kind) : m;
           sum.errors.add(m);
+          halt(c, f != null ? f.kind : "key", sum.haltReason, m);
           break;
         }
         sum.failed++;

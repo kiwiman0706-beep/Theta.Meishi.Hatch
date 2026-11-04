@@ -290,3 +290,33 @@ test("a QR code on the card: Gemini is told, and its e-mail replaces a misread o
   assert.match(p.rawText, /\[QRコード\] BEGIN:VCARD/);
   assert.ok(bodies.some((b) => b.includes("QR1: BEGIN:VCARD")), "the code's text goes to Gemini");
 });
+
+test("Gemini's limits: the per-minute one waits and goes on, the daily one stops with the reason until 再開", async () => {
+  const t = setup({ ...CARD, name: "山田 太郎" });
+  t.setKey("AIza-test");
+  t.backend.waitMs = 0;
+  const plain = t.backend.fetch;
+  const refuse = (status, body) => ({ ok: false, status, text: async () => JSON.stringify(body) });
+  const minute = { error: { code: 429, message: "Please retry in 3.2s.", details: [{ violations: [{ quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier" }] }, { retryDelay: "3s" }] } };
+  let n = 0;
+  t.backend.fetch = async (url, opt) => (n++ === 0 ? refuse(429, minute) : plain(url, opt));
+  await t.backend.importFiles([t.file("m.jpg", "JPEG1")], {});
+  await t.settle();
+  assert.strictEqual(t.store.people()[0].name, "山田 太郎", "read after waiting");
+  assert.strictEqual(t.backend.state().geminiHalt, null);
+
+  const daily = JSON.parse(JSON.stringify(minute).replace("PerMinutePerProject", "PerDayPerProject"));
+  t.backend.fetch = async () => refuse(429, daily);
+  await t.backend.importFiles([t.file("d.jpg", "JPEG2")], {});
+  await t.settle();
+  const halt = t.backend.state().geminiHalt;
+  assert.strictEqual(halt.kind, "daily");
+  assert.match(halt.text, /1日の無料枠/);
+  const waiting = t.store.people().find((p) => p.queue);
+  assert.ok(waiting, "the card stays queued");
+  t.backend.fetch = plain;
+  await t.backend.dispatch("resumeQueue", {});
+  await t.settle();
+  assert.strictEqual(t.backend.state().geminiHalt, null);
+  assert.ok(!t.store.people().some((p) => p.queue));
+});

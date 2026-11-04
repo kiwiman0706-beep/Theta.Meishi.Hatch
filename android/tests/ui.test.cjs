@@ -526,6 +526,19 @@ const p = (id, name, company, status = "confirmed") => ({
   await page.getByRole("button", { name: /vCardで送る/ }).click();
   calls = await page.evaluate(() => window.calls);
   assert.deepEqual(calls.at(-1), { action: "vcard", ids: ["demo-1"] });
+  // Gemini stopped the queue: the card says why instead of spinning, with 再開.
+  await page.evaluate((d) => {
+    const people = d.people.map((x, i) => (i === 0 ? { ...x, queue: "recognize", suggestion: undefined } : x));
+    onNative({ type: "state", data: { ...d, people, processing: "", geminiHalt: { kind: "daily", text: "Geminiの1日の無料枠を使い切りました。", detail: "Gemini HTTP 429\nquota" } } });
+    openPerson("demo-1");
+  }, demo);
+  assert(await page.getByText("読み取りを一時停止しています（残り1件）").isVisible());
+  assert.equal(await page.getByText("読み取り中…").count(), 0, "no endless spinner");
+  await page.screenshot({ path: path.join(screenshotDir, "25-halt.png") });
+  await page.getByRole("button", { name: /再開/ }).click();
+  calls = await page.evaluate(() => window.calls);
+  assert.deepEqual(calls.at(-1), { action: "resumeQueue" });
+  await page.evaluate((d) => { onNative({ type: "state", data: d }); go("home"); }, demo);
   // Copy as text: checkboxes appear by each field, only the ticked ones are copied.
   await page.evaluate((d) => { onNative({ type: "state", data: d }); openPerson("demo-1"); }, demo);
   await page.getByRole("button", { name: /^コピー$/ }).first().click();

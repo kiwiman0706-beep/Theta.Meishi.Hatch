@@ -1,5 +1,11 @@
 # 開発引き継ぎ
 
+## 0.18.3での変更（Geminiの上限・キーの誤りで止まったとき）
+
+- Geminiの断りを種類で分ける（`Gemini.Failure.kind` / `gemini.js` の `kind`）：`minute`（1分の上限）、`daily`（1日の無料枠、`quotaId` に `PerDay`）、`key`（無効・期限切れ。400 の `API_KEY_INVALID` も）、`disabled`（APIが無効）、`denied`（その他の403）、`model`（404）、`other`。それぞれの対処を `advice`。
+- `minute` は Google の `retryDelay`（無ければ「retry in N s」、既定30秒、10〜70秒）だけ待って同じ名刺から続ける（1回の処理で4回まで）。待っている間は進捗に残り秒数。
+- 止まったら `geminiHalt {kind, text, detail, at}`（Android は prefs、デスクトップ・Webは設定）。画面は名刺の「読み取り中…」の代わりに理由・Googleのメッセージ・「再開」（`resumeQueue`）、ホームにも同じお知らせ。次の処理の開始で消し、また断られたら付け直す。
+
 ## 0.18.2での変更（名刺の内容をテキストでコピー）
 
 - 詳細の「連絡先情報」に「コピー」。押すと各項目にチェックボックス（`copyPick`、`copyPanel`）、下に送られる文字の見本、「項目名を付ける」（`会社・組織：…`／値だけ、郵便番号は〒付き）、「クリップボードにコピー」。前回選んだ項目と項目名の有無は端末に記憶（localStorage `copy.keys` / `copy.labels`）。

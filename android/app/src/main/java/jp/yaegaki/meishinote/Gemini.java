@@ -9,6 +9,66 @@ import java.util.*;
 import org.json.*;
 
 public final class Gemini {
+  // An answer Gemini refused, sorted by what the user can do about it (desktop/lib/gemini.js has
+  // the same): "minute" (per-minute limit: wait retrySeconds and go on), "daily" (the day's free
+  // quota), "key" (key invalid or expired), "disabled" (the API is off in the key's project),
+  // "denied" (other 403), "model" (no such model), "other".
+  public static final class Failure extends IOException {
+    public final int status, retrySeconds;
+    public final String kind;
+
+    Failure(int status, String kind, int retrySeconds, String message) {
+      super(message);
+      this.status = status;
+      this.kind = kind;
+      this.retrySeconds = retrySeconds;
+    }
+
+    // Stops the whole queue (every card would fail the same way).
+    public boolean stopsAll() {
+      return !kind.equals("model") && !kind.equals("other");
+    }
+  }
+
+  static String kind(int status, String body) {
+    String b = body == null ? "" : body;
+    if (status == 429) return b.matches("(?s).*(PerDay|per day|daily).*") ? "daily" : "minute";
+    if (b.matches("(?s).*(API_KEY_INVALID|API key not valid|API key expired|API_KEY_EXPIRED).*")) return "key";
+    if (b.matches("(?s).*(SERVICE_DISABLED|has not been used|is disabled).*")) return "disabled";
+    if (status == 401) return "key";
+    if (status == 403) return "denied";
+    if (status == 404) return "model";
+    return "other";
+  }
+
+  // RetryInfo "37s", or "Please retry in 37.2s" in the message; 0 when not given.
+  static int retrySeconds(String body) {
+    java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"retryDelay\"\\s*:\\s*\"(\\d+)").matcher(body == null ? "" : body);
+    if (m.find()) return Integer.parseInt(m.group(1));
+    m = java.util.regex.Pattern.compile("retry in (\\d+)").matcher(body == null ? "" : body);
+    return m.find() ? Integer.parseInt(m.group(1)) + 1 : 0;
+  }
+
+  // What to tell the user (and what to do) for each kind.
+  public static String advice(String kind) {
+    switch (kind) {
+      case "minute":
+        return "Geminiの1分あたりの上限に達しました（無料枠は1分に数回までです）。少し待ってから「再開」を押してください。";
+      case "daily":
+        return "Geminiの1日の無料枠を使い切りました。枠は日本時間の夕方（太平洋時間の0時）に戻るので、その後「再開」を押してください。急ぐときは、メニューの「Gemini APIキー・モデル」で別のモデルに変える（枠はモデルごと）か、Google AI Studioで請求先を設定してください。";
+      case "key":
+        return "Gemini APIキーが無効か、期限が切れています。メニューの「Gemini APIキー・モデル」で、Google AI Studioのキーを入れ直してください。";
+      case "disabled":
+        return "このAPIキーのGoogle Cloudプロジェクトで、Gemini API（Generative Language API）が有効になっていません。Google AI Studioでキーを作り直すか、Google CloudでAPIを有効にしてください。";
+      case "denied":
+        return "Gemini APIへのアクセスが拒否されました。APIキーの制限（Androidアプリ・IPアドレスなど）や、請求先の設定を確認してください。";
+      case "model":
+        return "このモデルは使えません。メニューの「Gemini APIキー・モデル」で「モデル一覧」から選び直してください。";
+      default:
+        return "時間を空けて再試行してください。";
+    }
+  }
+
   final Context c;
   final String key, model, format;
 
@@ -51,17 +111,8 @@ public final class Gemini {
         } catch (Exception ignored) {
         }
         message = message.replace(key, "[APIキー]");
-        throw new IOException(
-            "Gemini HTTP "
-                + status
-                + "\n"
-                + message
-                + "\n"
-                + (status == 429
-                    ? "利用上限または混雑です。時間を空けて再試行してください。"
-                    : status == 404
-                        ? "モデル一覧を取得して利用可能なモデルに変更してください。"
-                        : "APIキー・モデル名・請求設定を確認してください。"));
+        String kind = kind(status, text);
+        throw new Failure(status, kind, retrySeconds(text), "Gemini HTTP " + status + "\n" + message + "\n" + advice(kind));
       }
       return new JSONObject(text);
     } finally {

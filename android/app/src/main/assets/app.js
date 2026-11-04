@@ -386,7 +386,7 @@ function home() {
   const drive = state.driveFolderName
     ? `<button class="setup drive" onclick="call('driveImport')">${icon("cloud")}<span><b>Google Driveから取り込む</b><small>${esc(state.driveFolderName)} の新しい名刺</small></span>${icon("next")}</button>`
     : "";
-  return `<header class="top"><div class="brand"><div class="mark">${icon("card")}</div><div><div class="brandline">THETA</div><h1>Meishi Hatch</h1></div></div></header>${recordBanner()}${busyNow}${updateBanner}${googleBanner}${seriesBanner()}${setup}${dupBanner}${nengaBanner}${drive}<div class="toolbar"><div class="search">${icon("search")}<input id="search" placeholder="氏名・会社・メモを検索" value="${esc(query)}" oninput="query=this.value;updateList()"></div></div>${state.people.length ? `<div class="views" role="tablist">${[
+  return `<header class="top"><div class="brand"><div class="mark">${icon("card")}</div><div><div class="brandline">THETA</div><h1>Meishi Hatch</h1></div></div></header>${recordBanner()}${busyNow}${updateBanner}${googleBanner}${haltNote(false)}${seriesBanner()}${setup}${dupBanner}${nengaBanner}${drive}<div class="toolbar"><div class="search">${icon("search")}<input id="search" placeholder="氏名・会社・メモを検索" value="${esc(query)}" oninput="query=this.value;updateList()"></div></div>${state.people.length ? `<div class="views" role="tablist">${[
     ["cards", "リスト", "list"],
     ["table", "表", "table"],
     ["calendar", "カレンダー", "clock"],
@@ -690,7 +690,15 @@ function copyDo() {
 function openLink(i) {
   call("openUrl", { url: links[i] });
 }
+// Gemini refused and the queue stopped: why, what to do, and a way to go on.
+function haltNote(full) {
+  const h = state.geminiHalt;
+  if (!h || state.processing) return "";
+  const left = state.people.filter((p) => p.queue && p.queue !== "contact").length;
+  return `<div class="tip warning halt"><b>${icon("clock")}読み取りを一時停止しています${left ? `（残り${left}件）` : ""}</b><p>${esc(h.text)}</p>${full && h.detail ? `<details><summary class="caption">Googleからのメッセージ</summary><pre class="haltdetail">${esc(h.detail)}</pre></details>` : ""}<div class="row gap">${h.kind === "key" || h.kind === "model" ? `<button class="outline noflex" onclick="go('gemini')">${icon("spark")}APIキー・モデル</button>` : ""}<button class="primary noflex" onclick="call('resumeQueue')">${icon("rotate")}再開</button></div></div>`;
+}
 function primaryAction(p) {
+  if (p.queue && p.queue !== "contact" && state.geminiHalt && !state.processing) return haltNote(true);
   if (p.queue)
     return `<button class="outline full" disabled><i class="spin"></i>${p.queue === "contact" ? "連絡先に登録中…" : "読み取り中…"}</button>`;
   if (p.suggestion)

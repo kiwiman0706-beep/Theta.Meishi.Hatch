@@ -4,6 +4,34 @@
 const PROMPTS = require("./prompts.json");
 const API = "https://generativelanguage.googleapis.com/v1beta/";
 
+// Gemini's refusals sorted by what the user can do (Gemini.Failure on Android has the same).
+function kind(status, body) {
+  const b = String(body || "");
+  if (status === 429) return /PerDay|per day|daily/.test(b) ? "daily" : "minute";
+  if (/API_KEY_INVALID|API key not valid|API key expired|API_KEY_EXPIRED/.test(b)) return "key";
+  if (/SERVICE_DISABLED|has not been used|is disabled/.test(b)) return "disabled";
+  if (status === 401) return "key";
+  if (status === 403) return "denied";
+  if (status === 404) return "model";
+  return "other";
+}
+function retrySeconds(body) {
+  const b = String(body || "");
+  const m = /"retryDelay"\s*:\s*"(\d+)/.exec(b);
+  if (m) return Number(m[1]);
+  const r = /retry in (\d+)/.exec(b);
+  return r ? Number(r[1]) + 1 : 0;
+}
+const ADVICE = {
+  minute: "Geminiの1分あたりの上限に達しました（無料枠は1分に数回までです）。少し待ってから「再開」を押してください。",
+  daily: "Geminiの1日の無料枠を使い切りました。枠は日本時間の夕方（太平洋時間の0時）に戻るので、その後「再開」を押してください。急ぐときは、メニューの「Gemini APIキー・モデル」で別のモデルに変える（枠はモデルごと）か、Google AI Studioで請求先を設定してください。",
+  key: "Gemini APIキーが無効か、期限が切れています。メニューの「Gemini APIキー・モデル」で、Google AI Studioのキーを入れ直してください。",
+  disabled: "このAPIキーのGoogle Cloudプロジェクトで、Gemini API（Generative Language API）が有効になっていません。Google AI Studioでキーを作り直すか、Google CloudでAPIを有効にしてください。",
+  denied: "Gemini APIへのアクセスが拒否されました。APIキーの制限（Androidアプリ・IPアドレスなど）や、請求先の設定を確認してください。",
+  model: "このモデルは使えません。メニューの「Gemini APIキー・モデル」で「モデル一覧」から選び直してください。",
+  other: "時間を空けて再試行してください。",
+};
+
 async function request(key, pathAndQuery, body, fetchImpl = fetch) {
   const res = await fetchImpl(API + pathAndQuery, {
     method: body ? "POST" : "GET",
@@ -18,10 +46,10 @@ async function request(key, pathAndQuery, body, fetchImpl = fetch) {
       message = JSON.parse(text).error.message;
     } catch {}
     message = String(message).split(key).join("[APIキー]");
-    throw new Error(
-      `Gemini HTTP ${res.status}\n${message}\n` +
-        (res.status === 429 ? "利用上限または混雑です。時間を空けて再試行してください。" : res.status === 404 ? "モデル一覧を取得して利用可能なモデルに変更してください。" : "APIキー・モデル名・請求設定を確認してください。"),
-    );
+    const k = kind(res.status, text);
+    const e = new Error(`Gemini HTTP ${res.status}\n${message}\n${ADVICE[k]}`);
+    Object.assign(e, { status: res.status, kind: k, retrySeconds: retrySeconds(text), stopsAll: k !== "model" && k !== "other" });
+    throw e;
   }
   return JSON.parse(text);
 }
@@ -84,4 +112,4 @@ async function officialSite({ key, model }, p, fetchImpl) {
   return m && !/vertexaisearch|google\./.test(m[0]) ? m[0] : "";
 }
 
-module.exports = { models, generate, officialSite };
+module.exports = { models, generate, officialSite, kind, retrySeconds, ADVICE };

@@ -1984,3 +1984,28 @@ tr.picked {
   white-space: nowrap;
   padding: 0 12px;
 }
+
+/* ---- Reading stopped (Gemini quota / key) ---- */
+.halt b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.halt b svg {
+  width: 18px;
+  height: 18px;
+}
+.halt p {
+  margin: 6px 0 0;
+}
+.halt .primary,
+.halt .outline {
+  width: auto;
+  padding: 0 14px;
+}
+.haltdetail {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 12px;
+  margin: 6px 0 0;
+}

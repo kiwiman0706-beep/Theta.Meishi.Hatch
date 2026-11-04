@@ -376,6 +376,7 @@ public class MainActivity extends Activity {
           .put("syncError", prefs().getString("syncError", ""))
           .put("processing", ProcessingService.running ? ProcessingService.status : "")
           .put("lastReport", prefs().getString("lastReport", ""))
+          .put("geminiHalt", prefs().getString("geminiHalt", "").isEmpty() ? JSONObject.NULL : new JSONObject(prefs().getString("geminiHalt", "")))
           .put("driveFolderId", prefs().getString("driveFolderId", ""))
           .put("driveMode", prefs().getString("driveMode", "file"))
           .put("recording", RecordingService.activeId)
@@ -1318,6 +1319,13 @@ public class MainActivity extends Activity {
           event("toast", "設定を保存しました");
           break;
         }
+      case "resumeQueue":
+        // After the quota came back or the key was fixed: the cards still queued go on.
+        prefs().edit().remove("geminiHalt").apply();
+        refresh();
+        startProcessing();
+        event("toast", "読み取りを再開しました");
+        break;
       case "models":
         task("利用可能なモデルを取得中", () -> event("models", new Gemini(this).models()));
         break;

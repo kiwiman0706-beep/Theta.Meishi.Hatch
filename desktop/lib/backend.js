@@ -66,6 +66,7 @@ class Backend {
       lastReport: s.get("lastReport", ""),
       upgradeLogos: model.logoPicks(this.store.people()).length,
       upgradeRecut: model.recutPicks(this.store.people()).length,
+      geminiHalt: s.get("geminiHalt", null),
       ...this.seriesState(),
       ...this.info(), // app version and a pending update (main.js)
     };
@@ -272,6 +273,11 @@ class Backend {
         this.refresh();
         return this.toast("設定を保存しました");
       }
+      case "resumeQueue":
+        // After the quota came back or the key was fixed: the cards still queued go on.
+        this.settings.set({ geminiHalt: null });
+        this.toast("読み取りを再開しました");
+        return this.work();
       case "models":
         this.needKey();
         return this.event("models", await gemini.models(this.secrets.get(), this.fetch));
@@ -569,7 +575,8 @@ class Backend {
   async work() {
     if (this.running) return;
     this.running = true;
-    let done = 0, failed = 0;
+    let done = 0, failed = 0, waits = 0;
+    this.settings.set({ geminiHalt: null }); // trying again: set again if it still fails
     const logos = { none: 0 };
     const errors = [];
     try {
@@ -597,8 +604,19 @@ class Backend {
           done++;
         } catch (e) {
           const m = String(e.message);
-          if (/HTTP (429|401|403)|APIキー/.test(m)) {
-            errors.push(m + "\n残りは後で「未認識をまとめて読み取る」から再開できます");
+          // The per-minute limit: wait as long as Google says, then the same card again.
+          if (e.kind === "minute" && waits < 4) {
+            waits++;
+            for (let t = Math.max(10, Math.min(e.retrySeconds || 30, 70)); t > 0; t--) {
+              this.processing = `Geminiの1分あたりの上限のため待っています（あと${t}秒）`;
+              this.refresh();
+              await new Promise((r) => setTimeout(r, this.waitMs ?? 1000));
+            }
+            continue;
+          }
+          if (e.stopsAll || (!e.kind && /APIキー/.test(m))) {
+            this.settings.set({ geminiHalt: { kind: e.kind || "key", text: e.kind ? gemini.ADVICE[e.kind] : m, detail: m, at: Date.now() } });
+            errors.push(m + "\n画面の「再開」から続けられます");
             break;
           }
           failed++;
