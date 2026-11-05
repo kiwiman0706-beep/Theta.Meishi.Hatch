@@ -320,3 +320,29 @@ test("Gemini's limits: the per-minute one waits and goes on, the daily one stops
   assert.strictEqual(t.backend.state().geminiHalt, null);
   assert.ok(!t.store.people().some((p) => p.queue));
 });
+
+test("new cards are read before old cards' logos, which stop for the day at their allowance; calls are counted", async () => {
+  const t = setup({ ...CARD, name: "新しい人", box: "" });
+  t.setKey("AIza-test");
+  const order = [];
+  const plain = t.backend.fetch;
+  t.backend.fetch = async (url, opt) => {
+    const body = String(opt && opt.body);
+    order.push(body.includes("ロゴ（シンボルマーク") && !body.includes("全キーを持つ") ? "logo" : "read");
+    return plain(url, opt);
+  };
+  await t.backend.dispatch("new", {});
+  const old = t.store.people()[0];
+  await t.store.writeMedia("o.jpg", Buffer.from("OLD"));
+  t.store.put({ ...t.store.person(old.id), name: "昔の人", company: "旧社", status: "confirmed", pages: [{ file: "o.jpg" }], queue: "logo" }, false);
+  t.backend.settings.set({ geminiLog: { day: t.backend.geminiLog().day, calls: { logo: 30 }, refused: 0 } });
+  await t.backend.importFiles([t.file("n.jpg", "NEW")], {});
+  await t.settle();
+  assert.deepStrictEqual(order, ["read"], "the new card was read; the old logo waits for tomorrow");
+  assert.strictEqual(t.store.person(old.id).queue, "logo");
+  const s = t.backend.state();
+  assert.strictEqual(s.upgradeQueued, 1);
+  assert.strictEqual(s.geminiLog.calls.read, 1);
+  await t.backend.dispatch("cancelUpgrade", {});
+  assert.ok(!t.store.person(old.id).queue);
+});

@@ -539,6 +539,18 @@ const p = (id, name, company, status = "confirmed") => ({
   calls = await page.evaluate(() => window.calls);
   assert.deepEqual(calls.at(-1), { action: "resumeQueue" });
   await page.evaluate((d) => { onNative({ type: "state", data: d }); go("home"); }, demo);
+  // Gemini usage: today's calls from this device, Google's usage page, the old cards' updates.
+  await page.evaluate((d) => { onNative({ type: "state", data: { ...d, geminiLog: { day: "2026-11-05", calls: { read: 3, logo: 12 }, refused: 1 }, upgradeQueued: 40, upgradePerDay: 30 } }); settingsDraft = null; go("gemini"); }, demo);
+  assert(await page.getByText(/今日のこの端末からの呼び出し 15回（名刺の読み取り 3・ロゴ 12） ・ うち断られた 1回/).isVisible());
+  await page.getByRole("button", { name: /Google AI Studio の使用状況/ }).click();
+  calls = await page.evaluate(() => window.calls);
+  assert.deepEqual(calls.at(-1), { action: "openUrl", url: "https://aistudio.google.com/usage" });
+  await page.screenshot({ path: path.join(screenshotDir, "26-usage.png"), fullPage: true });
+  await page.evaluate(() => go("menu"));
+  await page.getByRole("button", { name: /過去の名刺を更新中/ }).click();
+  calls = await page.evaluate(() => window.calls);
+  assert.deepEqual(calls.at(-1), { action: "cancelUpgrade" });
+  await page.evaluate((d) => { onNative({ type: "state", data: d }); go("home"); }, demo);
   // Copy as text: checkboxes appear by each field, only the ticked ones are copied.
   await page.evaluate((d) => { onNative({ type: "state", data: d }); openPerson("demo-1"); }, demo);
   await page.getByRole("button", { name: /^コピー$/ }).first().click();

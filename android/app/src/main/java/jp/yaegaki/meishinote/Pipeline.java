@@ -22,10 +22,38 @@ public final class Pipeline {
     return c.getSharedPreferences("prefs", 0);
   }
 
-  public static int pending(Store s) throws Exception {
+  // Bringing old cards up to date (readings, logos) is background work: it waits behind new cards
+  // and uses at most this many Gemini calls a day, so the free quota stays for reading.
+  static final Set<String> UPGRADE = new HashSet<>(Arrays.asList("kana", "logo", "relogo"));
+  public static final int UPGRADE_PER_DAY = 30;
+
+  static String step(JSONObject p) {
+    return p.optString("queue").split(",", 2)[0];
+  }
+
+  // 0: reading, 1: contacts, 2: old cards.
+  static int rank(String step) {
+    return step.equals("recognize") || step.equals("nenga") ? 0 : step.equals("contact") ? 1 : 2;
+  }
+
+  static boolean runnable(Context c, JSONObject p) {
+    if (p.optString("queue").isEmpty()) return false;
+    return !UPGRADE.contains(step(p)) || Gemini.upgradeCallsToday(c) < UPGRADE_PER_DAY;
+  }
+
+  // Cards with work that can be done now.
+  public static int pending(Context c) throws Exception {
+    int n = 0;
+    JSONArray a = Store.get(c).snapshot().getJSONArray("people");
+    for (int i = 0; i < a.length(); i++) if (runnable(c, a.getJSONObject(i))) n++;
+    return n;
+  }
+
+  // Old cards still waiting to be brought up to date.
+  public static int upgradeQueued(Store s) throws Exception {
     int n = 0;
     JSONArray a = s.snapshot().getJSONArray("people");
-    for (int i = 0; i < a.length(); i++) if (!a.getJSONObject(i).optString("queue").isEmpty()) n++;
+    for (int i = 0; i < a.length(); i++) if (UPGRADE.contains(step(a.getJSONObject(i)))) n++;
     return n;
   }
 
@@ -114,11 +142,12 @@ public final class Pipeline {
       JSONObject next = null;
       JSONArray a = s.snapshot().getJSONArray("people");
       int left = 0;
+      // New cards first, old cards' upgrades last (and only within today's allowance).
       for (int i = 0; i < a.length(); i++) {
         JSONObject p = a.getJSONObject(i);
-        if (p.optString("queue").isEmpty() || tried.contains(p.getString("id") + p.optString("queue"))) continue;
+        if (!runnable(c, p) || tried.contains(p.getString("id") + p.optString("queue"))) continue;
         left++;
-        if (next == null) next = p;
+        if (next == null || rank(step(p)) < rank(step(next))) next = p;
       }
       if (next == null) break;
       // A queue can chain steps ("kana,logo" from the upgrade of old cards): first one now.

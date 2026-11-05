@@ -174,7 +174,7 @@ public class ProcessingService extends Service {
         String token = driveToken;
         driveToken = "";
         if (!token.isEmpty()) drive(token, report);
-        if (Pipeline.pending(Store.get(this)) == 0) {
+        if (Pipeline.pending(this) == 0) {
           if (driveToken.isEmpty()) break;
           continue;
         }

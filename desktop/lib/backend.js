@@ -16,6 +16,8 @@ const vcard = require("./vcard");
 
 // Features the desktop offers; the UI hides the rest (see THETA_HATCH_SPEC §4.1).
 const CAPS = ["pick", "folder", "gemini", "vault", "map", "export", "nenga", "attach"];
+// Bringing old cards up to date is background work: at most this many Gemini calls a day.
+const UPGRADE_PER_DAY = 30;
 const NOT_HERE = "この操作はスマホ版（Android）で行えます";
 
 class Backend {
@@ -36,6 +38,20 @@ class Backend {
     this.running = false;
     this.geoCache = new Map();
     store.on(() => this.refresh());
+    gemini.setOnCall((purpose, status) => this.countCall(purpose, status));
+  }
+
+  // Today's Gemini calls (the free quota's day ends at midnight in California), as on Android.
+  geminiLog() {
+    const day = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    const l = this.settings.get("geminiLog", null);
+    return l && l.day === day ? l : { day, calls: {}, refused: 0 };
+  }
+  countCall(purpose, status) {
+    const l = this.geminiLog();
+    l.calls[purpose] = (l.calls[purpose] || 0) + 1;
+    if (status >= 400) Object.assign(l, { refused: l.refused + 1, lastRefused: `HTTP ${status}（${purpose}）` });
+    this.settings.set({ geminiLog: l });
   }
 
   on(fn) {
@@ -67,6 +83,9 @@ class Backend {
       upgradeLogos: model.logoPicks(this.store.people()).length,
       upgradeRecut: model.recutPicks(this.store.people()).length,
       geminiHalt: s.get("geminiHalt", null),
+      geminiLog: this.geminiLog(),
+      upgradeQueued: this.store.people().filter((p) => p.queue === "logo" || p.queue === "relogo").length,
+      upgradePerDay: UPGRADE_PER_DAY,
       ...this.seriesState(),
       ...this.info(), // app version and a pending update (main.js)
     };
@@ -272,6 +291,17 @@ class Backend {
         }
         this.refresh();
         return this.toast("設定を保存しました");
+      }
+      case "cancelUpgrade": {
+        let n = 0;
+        for (const p of this.store.people().filter((x) => x.queue === "logo" || x.queue === "relogo")) {
+          const x = this.store.person(p.id);
+          delete x.queue;
+          this.store.put(x, false);
+          n++;
+        }
+        this.refresh();
+        return this.toast(n + "件の更新を中止しました");
       }
       case "resumeQueue":
         // After the quota came back or the key was fixed: the cards still queued go on.
@@ -581,7 +611,11 @@ class Backend {
     const errors = [];
     try {
       for (;;) {
-        const next = this.store.people().find((p) => p.queue);
+        // New cards first; old cards' logos last, within today's allowance (Pipeline.java).
+        const queued = this.store.people().filter((p) => p.queue);
+        const upgrade = (p) => p.queue === "logo" || p.queue === "relogo";
+        const used = (this.geminiLog().calls.logo || 0) + (this.geminiLog().calls.kana || 0);
+        const next = queued.find((p) => !upgrade(p)) || (used < UPGRADE_PER_DAY ? queued.find(upgrade) : null);
         if (!next) break;
         const left = this.store.people().filter((p) => p.queue).length;
         const what = { nenga: "年賀状を読み取り中", logo: "会社ロゴを切り出し中", relogo: "会社ロゴを切り出し中" }[next.queue] || "名刺を読み取り中";

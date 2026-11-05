@@ -1,5 +1,11 @@
 # 開発引き継ぎ
 
+## 0.18.4での変更（Geminiの無料枠を過去データの更新が使い切らないように）
+
+- 調べた結果：再試行の無限ループは無い（1回の処理で各名刺1回、断られたら停止、1分の上限の待ち直しは4回まで）。ただしアプリを開くたび（`onResume`）に残りを1回試す。問題は「過去の名刺を最新の状態にする」の残り（読み仮名・ロゴ。1件1〜2回の呼び出し）が一覧の古い順に先に処理され、毎日の無料枠を使い切って新しい名刺の読み取りが後回しになること。
+- 処理の順：読み取り・年賀状 → 連絡先 → 過去の名刺の更新（`Pipeline.rank`）。更新（kana・logo・relogo）は1日 `UPGRADE_PER_DAY`=30回まで（`runnable`、超えた分は翌日。`pending(Context)` も数えない）。デスクトップも同じ（logo・relogo）。メニューに「過去の名刺を更新中（残りN件）」、押すと中止（`cancelUpgrade`）。
+- 呼び出しの記録：`Gemini.record` / `Backend.countCall`。太平洋時間の日付ごとに用途別の回数と断られた回数（`geminiLog`）。「Gemini APIキー・モデル」の「使用状況」と、止まったときのお知らせに表示。Google AI Studio の使用状況（`https://aistudio.google.com/usage`）、APIキー一覧、Google Cloud の割り当てへのリンク。
+
 ## 0.18.3での変更（Geminiの上限・キーの誤りで止まったとき）
 
 - Geminiの断りを種類で分ける（`Gemini.Failure.kind` / `gemini.js` の `kind`）：`minute`（1分の上限）、`daily`（1日の無料枠、`quotaId` に `PerDay`）、`key`（無効・期限切れ。400 の `API_KEY_INVALID` も）、`disabled`（APIが無効）、`denied`（その他の403）、`model`（404）、`other`。それぞれの対処を `advice`。

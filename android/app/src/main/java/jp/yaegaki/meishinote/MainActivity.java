@@ -376,6 +376,9 @@ public class MainActivity extends Activity {
           .put("syncError", prefs().getString("syncError", ""))
           .put("processing", ProcessingService.running ? ProcessingService.status : "")
           .put("lastReport", prefs().getString("lastReport", ""))
+          .put("geminiLog", Gemini.log(this))
+          .put("upgradeQueued", Pipeline.upgradeQueued(store))
+          .put("upgradePerDay", Pipeline.UPGRADE_PER_DAY)
           .put("geminiHalt", prefs().getString("geminiHalt", "").isEmpty() ? JSONObject.NULL : new JSONObject(prefs().getString("geminiHalt", "")))
           .put("driveFolderId", prefs().getString("driveFolderId", ""))
           .put("driveMode", prefs().getString("driveMode", "file"))
@@ -1319,6 +1322,23 @@ public class MainActivity extends Activity {
           event("toast", "設定を保存しました");
           break;
         }
+      case "cancelUpgrade":
+        {
+          // Stop bringing old cards up to date (readings and logos still waiting).
+          JSONArray a = store.snapshot().getJSONArray("people");
+          int n = 0;
+          for (int i = 0; i < a.length(); i++) {
+            JSONObject p = a.getJSONObject(i);
+            if (!Pipeline.UPGRADE.contains(Pipeline.step(p))) continue;
+            JSONObject x = store.person(p.getString("id"));
+            x.remove("queue");
+            store.put(x);
+            n++;
+          }
+          refresh();
+          event("toast", n + "件の更新を中止しました");
+          break;
+        }
       case "resumeQueue":
         // After the quota came back or the key was fixed: the cards still queued go on.
         prefs().edit().remove("geminiHalt").apply();
@@ -2073,7 +2093,7 @@ public class MainActivity extends Activity {
     super.onResume();
     if (store != null && ready) refresh();
     try {
-      if (store != null && !ProcessingService.running && Pipeline.pending(store) > 0 && prefs().contains("key"))
+      if (store != null && !ProcessingService.running && Pipeline.pending(this) > 0 && prefs().contains("key"))
         ProcessingService.start(this);
       // Pick up other devices' changes when the app comes back after a while.
       if (store != null

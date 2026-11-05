@@ -69,8 +69,49 @@ public final class Gemini {
     }
   }
 
+  // ---- Today's calls (the free quota's day: midnight in California), for the screen ----------
+  static final String[] PURPOSES = {"read", "nenga", "kana", "logo", "ink", "models"};
+
+  static String day() {
+    java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+    f.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
+    return f.format(new Date());
+  }
+
+  // { day, calls: {purpose: n}, refused: n, lastRefused } of today.
+  public static synchronized JSONObject log(Context c) {
+    try {
+      JSONObject l = new JSONObject(c.getSharedPreferences("prefs", 0).getString("geminiLog", "{}"));
+      if (l.optString("day").equals(day())) return l;
+    } catch (JSONException ignored) {
+    }
+    try {
+      return new JSONObject().put("day", day()).put("calls", new JSONObject()).put("refused", 0);
+    } catch (JSONException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  static synchronized void record(Context c, String purpose, int status) {
+    try {
+      JSONObject l = log(c);
+      JSONObject calls = l.getJSONObject("calls");
+      calls.put(purpose, calls.optInt(purpose) + 1);
+      if (status >= 400) l.put("refused", l.optInt("refused") + 1).put("lastRefused", "HTTP " + status + "（" + purpose + "）");
+      c.getSharedPreferences("prefs", 0).edit().putString("geminiLog", l.toString()).apply();
+    } catch (JSONException ignored) {
+    }
+  }
+
+  // Calls made today for bringing old cards up to date (readings, logos).
+  public static int upgradeCallsToday(Context c) {
+    JSONObject calls = log(c).optJSONObject("calls");
+    return calls == null ? 0 : calls.optInt("kana") + calls.optInt("logo");
+  }
+
   final Context c;
   final String key, model, format;
+  String purpose = "read";
 
   public Gemini(Context c) throws Exception {
     this.c = c;
@@ -98,6 +139,7 @@ public final class Gemini {
         }
       }
       int status = con.getResponseCode();
+      record(c, purpose, status);
       InputStream stream = status < 400 ? con.getInputStream() : con.getErrorStream();
       String text = "";
       if (stream != null)
@@ -121,6 +163,7 @@ public final class Gemini {
   }
 
   public JSONArray models() throws Exception {
+    purpose = "models";
     JSONArray out = new JSONArray();
     String token = "";
     for (int p = 0; p < 10; p++) {
@@ -201,6 +244,7 @@ public final class Gemini {
 
   // A handwritten note (PNG from the pen pad) → its text.
   public String ink(File png) throws Exception {
+    purpose = "ink";
     byte[] image = Store.read(new java.io.FileInputStream(png), 8 * 1024 * 1024);
     JSONArray parts =
         new JSONArray()
@@ -211,6 +255,7 @@ public final class Gemini {
 
   // Text only (no image): the reading from a card already read, for Google Contacts.
   public JSONObject kana(JSONObject person) throws Exception {
+    purpose = "kana";
     String text = "氏名: " + person.optString("name") + "\n名刺の全文:\n" + person.optString("rawText");
     if (text.length() > 6000) text = text.substring(0, 6000);
     JSONArray parts = new JSONArray().put(new JSONObject().put("text", KANA_PROMPT)).put(new JSONObject().put("text", text));
@@ -220,6 +265,7 @@ public final class Gemini {
   // The organisation's official site via Gemini with Google Search (only when the card has neither
   // a web address nor a company e-mail). Returns a URL or "".
   public String officialSite(JSONObject p) throws Exception {
+    purpose = "logo";
     String org = p.optString("company");
     if (org.trim().isEmpty() && p.optString("kind").equals("shop")) org = p.optString("name");
     if (org.trim().isEmpty()) return "";
@@ -244,6 +290,7 @@ public final class Gemini {
 
   // Only the front page: that is where the logo is, and it keeps the request small.
   public JSONObject logoBox(JSONObject person) throws Exception {
+    purpose = "logo";
     JSONArray pages = person.getJSONArray("pages");
     if (pages.length() == 0) throw new IOException("名刺の画像がありません");
     return generate(new JSONObject().put("pages", new JSONArray().put(pages.get(0))), LOGO_PROMPT, LOGO_KEYS);
@@ -252,6 +299,7 @@ public final class Gemini {
   // A QR code on the card is read on the phone first: Gemini is told what it says, and its exact
   // e-mail / phone / URL win over the photo of the print (Qr).
   public JSONObject recognize(JSONObject person) throws Exception {
+    purpose = "read";
     List<String> codes = new ArrayList<>();
     JSONArray pages = person.optJSONArray("pages");
     Store s = Store.get(c);
@@ -263,6 +311,7 @@ public final class Gemini {
   }
 
   public JSONObject recognizeNenga(JSONObject person) throws Exception {
+    purpose = "nenga";
     return generate(person, NENGA_PROMPT, NENGA_KEYS);
   }
 
