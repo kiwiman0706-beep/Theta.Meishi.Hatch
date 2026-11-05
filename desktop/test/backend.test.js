@@ -319,6 +319,12 @@ test("Gemini's limits: the per-minute one waits and goes on, the daily one stops
   await t.settle();
   assert.strictEqual(t.backend.state().geminiHalt, null);
   assert.ok(!t.store.people().some((p) => p.queue));
+  // 402: the paid tier's payment stops the queue with its own advice.
+  t.backend.fetch = async () => refuse(402, { error: { code: 402, message: "Payment required" } });
+  await t.backend.importFiles([t.file("p.jpg", "JPEG3")], {});
+  await t.settle();
+  assert.strictEqual(t.backend.state().geminiHalt.kind, "billing");
+  assert.match(t.backend.state().geminiHalt.text, /請求/);
 });
 
 test("new cards are read before old cards' logos, which stop for the day at their allowance; calls are counted", async () => {

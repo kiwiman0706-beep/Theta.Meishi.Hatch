@@ -11,7 +11,7 @@ import org.json.*;
 public final class Gemini {
   // An answer Gemini refused, sorted by what the user can do about it (desktop/lib/gemini.js has
   // the same): "minute" (per-minute limit: wait retrySeconds and go on), "daily" (the day's free
-  // quota), "key" (key invalid or expired), "disabled" (the API is off in the key's project),
+  // quota), "billing" (402: the paid tier's payment), "key" (key invalid or expired), "disabled" (the API is off in the key's project),
   // "denied" (other 403), "model" (no such model), "other".
   public static final class Failure extends IOException {
     public final int status, retrySeconds;
@@ -33,6 +33,7 @@ public final class Gemini {
   static String kind(int status, String body) {
     String b = body == null ? "" : body;
     if (status == 429) return b.matches("(?s).*(PerDay|per day|daily).*") ? "daily" : "minute";
+    if (status == 402) return "billing";
     if (b.matches("(?s).*(API_KEY_INVALID|API key not valid|API key expired|API_KEY_EXPIRED).*")) return "key";
     if (b.matches("(?s).*(SERVICE_DISABLED|has not been used|is disabled).*")) return "disabled";
     if (status == 401) return "key";
@@ -56,6 +57,8 @@ public final class Gemini {
         return "Geminiの1分あたりの上限に達しました（無料枠は1分に数回までです）。少し待ってから「再開」を押してください。";
       case "daily":
         return "Geminiの1日の無料枠を使い切りました。枠は日本時間の夕方（太平洋時間の0時）に戻るので、その後「再開」を押してください。急ぐときは、メニューの「Gemini APIキー・モデル」で別のモデルに変える（枠はモデルごと）か、Google AI Studioで請求先を設定してください。";
+      case "billing":
+        return "Gemini APIの請求（支払い）に問題があります（Googleの返答：402 Payment Required）。このAPIキーのプロジェクトは有料枠のため、Google AI Studioの「使用状況・請求」またはGoogle Cloudの「お支払い」で、カードの期限・支払いの失敗・前払い残高を確認してください。解決したら「再開」を押してください。無料で使う場合は、請求先を付けていないプロジェクトでAPIキーを作り直してください。";
       case "key":
         return "Gemini APIキーが無効か、期限が切れています。メニューの「Gemini APIキー・モデル」で、Google AI Studioのキーを入れ直してください。";
       case "disabled":

@@ -20,6 +20,8 @@ public class GeminiFailureTest {
     assertEquals(37, Gemini.retrySeconds(MINUTE));
     assertEquals("daily", Gemini.kind(429, DAILY));
     assertEquals("key", Gemini.kind(400, BAD_KEY));
+    assertEquals("billing", Gemini.kind(402, "{}"));
+    assertTrue(new Gemini.Failure(402, "billing", 0, "x").stopsAll());
     assertEquals("disabled", Gemini.kind(403, DISABLED));
     assertEquals("denied", Gemini.kind(403, "{}"));
     assertEquals("model", Gemini.kind(404, "{}"));

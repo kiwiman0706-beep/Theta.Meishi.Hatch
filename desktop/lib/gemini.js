@@ -8,6 +8,7 @@ const API = "https://generativelanguage.googleapis.com/v1beta/";
 function kind(status, body) {
   const b = String(body || "");
   if (status === 429) return /PerDay|per day|daily/.test(b) ? "daily" : "minute";
+  if (status === 402) return "billing";
   if (/API_KEY_INVALID|API key not valid|API key expired|API_KEY_EXPIRED/.test(b)) return "key";
   if (/SERVICE_DISABLED|has not been used|is disabled/.test(b)) return "disabled";
   if (status === 401) return "key";
@@ -25,6 +26,7 @@ function retrySeconds(body) {
 const ADVICE = {
   minute: "Geminiの1分あたりの上限に達しました（無料枠は1分に数回までです）。少し待ってから「再開」を押してください。",
   daily: "Geminiの1日の無料枠を使い切りました。枠は日本時間の夕方（太平洋時間の0時）に戻るので、その後「再開」を押してください。急ぐときは、メニューの「Gemini APIキー・モデル」で別のモデルに変える（枠はモデルごと）か、Google AI Studioで請求先を設定してください。",
+  billing: "Gemini APIの請求（支払い）に問題があります（Googleの返答：402 Payment Required）。このAPIキーのプロジェクトは有料枠のため、Google AI Studioの「使用状況・請求」またはGoogle Cloudの「お支払い」で、カードの期限・支払いの失敗・前払い残高を確認してください。解決したら「再開」を押してください。無料で使う場合は、請求先を付けていないプロジェクトでAPIキーを作り直してください。",
   key: "Gemini APIキーが無効か、期限が切れています。メニューの「Gemini APIキー・モデル」で、Google AI Studioのキーを入れ直してください。",
   disabled: "このAPIキーのGoogle Cloudプロジェクトで、Gemini API（Generative Language API）が有効になっていません。Google AI Studioでキーを作り直すか、Google CloudでAPIを有効にしてください。",
   denied: "Gemini APIへのアクセスが拒否されました。APIキーの制限（Androidアプリ・IPアドレスなど）や、請求先の設定を確認してください。",
