@@ -1,5 +1,15 @@
 # 開発引き継ぎ
 
+## 0.19.0（新しいアプリ ID への橋渡し版）
+
+- シリーズの移行（Theta.Hatch.Series `docs/MIGRATION.md` §3、進み具合は `progress/meishi.md`）。移行は Theta Home Hatch がまとめて行う。この版は古い ID（`jp.yaegaki.meishiclaude`）のまま、今のアプリ内更新で入る。
+- `MigrationActivity`：`app.thetahatch.action.EXPORT`／`IMPORT`。呼び出しは `startActivityForResult` だけ、呼び出し元は同じ署名（`checkSignatures`）、利用者が確認。
+  - EXPORT：`Backup.make(c, true)` の zip を結果の data（`content://<id>.files/cache/migration.zip?name=…`、読み取り許可付き、extra `app.thetahatch.extra.FORMAT`=`meishi-migration/1`・`COUNT`）。端末だけの項目（連絡先・予定の行など `Sync.LOCAL`）と設定（`Backup.MIGRATED_SETTINGS`。Gemini キー・Google の許可・取り込みフォルダの権限は入れない）も含む。
+  - IMPORT：data か `EXTRA_STREAM` の zip を `Backup.restore(c, in, true)`。Vault から先に戻った名刺は端末だけの項目だけ足す。結果 extra `COUNT`、失敗は `RESULT_CANCELED`＋`app.thetahatch.extra.ERROR`。
+- 普通の復元で年賀状の画像の名前が付け替わらなかった不具合も直した。
+- 署名：`android/build.sh` は別名を `ANDROID_KEY_ALIAS`、鍵のパスワードを `SIGNING_KEY_PASS_FILE` から（シリーズの鍵の別名は `thetahatch` に変わったため）。APK 名は `ThetaMeishiHatch-<版>.apk`。
+- メニューに「新しい Theta Meishi Hatch へ移る」（Home を開く／無ければ Home の入手ページ）。
+
 ## 0.18.5での変更（402 Payment Required）
 
 - 実際の停止の原因は Google AI Studio の使用状況で「402 PaymentRequired」（有料枠＝Tier 1 のプロジェクトの請求の問題）だった。`kind` に `billing`（402）を追加し、止めて請求の確認を案内（Google Cloud の「お支払い」へのボタン）。

@@ -377,6 +377,7 @@ public class MainActivity extends Activity {
           .put("processing", ProcessingService.running ? ProcessingService.status : "")
           .put("lastReport", prefs().getString("lastReport", ""))
           .put("geminiLog", Gemini.log(this))
+          .put("hub", hubPackage())
           .put("upgradeQueued", Pipeline.upgradeQueued(store))
           .put("upgradePerDay", Pipeline.UPGRADE_PER_DAY)
           .put("geminiHalt", prefs().getString("geminiHalt", "").isEmpty() ? JSONObject.NULL : new JSONObject(prefs().getString("geminiHalt", "")))
@@ -646,6 +647,17 @@ public class MainActivity extends Activity {
             error(e);
           }
         });
+  }
+
+  // The installed Theta Home / KidsHome Hatch (new IDs first), or "".
+  String hubPackage() {
+    for (String p : new String[] {"app.thetahatch.home", "app.thetahatch.kidshome", "jp.yaegaki.theta.home", "com.theta.kidshome"})
+      try {
+        getPackageManager().getPackageInfo(p, 0);
+        return p;
+      } catch (Exception ignored) {
+      }
+    return "";
   }
 
   void setPending(JSONObject p) {
@@ -1337,6 +1349,15 @@ public class MainActivity extends Activity {
           }
           refresh();
           event("toast", n + "件の更新を中止しました");
+          break;
+        }
+      case "openHub":
+        {
+          // Moving to the new app is done from Theta Home Hatch (Theta.Hatch.Series MIGRATION §3).
+          String hub = hubPackage();
+          Intent open = hub.isEmpty() ? null : getPackageManager().getLaunchIntentForPackage(hub);
+          if (open != null) startActivity(open);
+          else startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases/latest")));
           break;
         }
       case "resumeQueue":

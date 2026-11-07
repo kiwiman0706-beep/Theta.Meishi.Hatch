@@ -196,6 +196,12 @@ public final class Store {
   }
 
   public synchronized void merge(JSONObject incoming) throws Exception {
+    merge(incoming, false);
+  }
+
+  // samePhone: the records come from this phone (moving the app to its new ID), so their links to
+  // its Google contacts stay.
+  public synchronized void merge(JSONObject incoming, boolean samePhone) throws Exception {
     JSONArray a = incoming.getJSONArray("people");
     Set<String> ids = new HashSet<>();
     JSONArray old = db.getJSONArray("people");
@@ -203,9 +209,11 @@ public final class Store {
     for (int i = 0; i < a.length(); i++) {
       JSONObject p = a.getJSONObject(i);
       if (!ids.contains(p.getString("id"))) {
-        p.remove("contactRawId");
-        p.remove("contactAccount");
-        p.remove("contactPhoto");
+        if (!samePhone) {
+          p.remove("contactRawId");
+          p.remove("contactAccount");
+          p.remove("contactPhoto");
+        }
         old.put(p);
         ids.add(p.getString("id"));
       }

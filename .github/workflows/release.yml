@@ -79,21 +79,24 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo "::warning::ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASSWORD are not set: no APK in this release"
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
+            echo "::warning::ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS are not set: no APK in this release"
             exit 0
           fi
           mkdir -p "$RUNNER_TEMP/signing"
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/signing/release.jks"
           printf '%s' "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/signing/password.txt"
+          printf '%s' "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}" > "$RUNNER_TEMP/signing/key-password.txt"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
-          SIGNING_FILE="$RUNNER_TEMP/signing/release.jks" SIGNING_PASS_FILE="$RUNNER_TEMP/signing/password.txt" android/build.sh
+          SIGNING_FILE="$RUNNER_TEMP/signing/release.jks" SIGNING_PASS_FILE="$RUNNER_TEMP/signing/password.txt" SIGNING_KEY_PASS_FILE="$RUNNER_TEMP/signing/key-password.txt" android/build.sh
           rm -rf "$RUNNER_TEMP/signing"
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: android/build/theta-meishi-hatch-*.apk
+          path: android/build/ThetaMeishiHatch-*.apk
           if-no-files-found: ignore
 
   windows:
