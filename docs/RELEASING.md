@@ -31,3 +31,13 @@ GitHub Actions（`.github/workflows/release.yml`）が、テスト → Android A
 
 未設定でもリリースは作られますが、APKは付きません。設定後にそのタグのワークフローを「Re-run all jobs」すると、APKが追加されます。
 **同じ鍵で署名し続けること**（鍵が変わると、上書きインストールできなくなります）。
+
+## 「HTTP 403: Resource not accessible by integration」で公開だけ止まるとき
+
+ワークフロー（`.github/workflows/`）を変えたコミットには、GitHub Actions の権限では新しいタグを作れない（2026-11-07、0.19.0 で確認）。ビルドは通り、最後の公開で 403 になる。
+
+1. GitHub の Releases →「Draft a new release」で、タグ `v<版>`（Create new tag）と、そのコミットを Target にして、ファイル無しで「Publish release」
+2. タグができると Release ワークフローがタグから動き、出来ているリリースにファイルを添付する（`gh release upload`）
+3. 本文は `docs/releases/v<版>.md` を貼る
+
+手で実行するときは「Commit to build and release」（`ref`）に、ブランチの先より前のコミットも指定できる。
