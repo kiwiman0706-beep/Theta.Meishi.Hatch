@@ -10,7 +10,7 @@
    - Windows：`winget install Google.GoogleDrive`
    - Mac：`brew install --cask google-drive`
 2. スマホ版でメニュー →「今すぐ同期」を一度行い、マイドライブに `Theta Vault` フォルダを作っておきます。
-3. [Releases](https://github.com/kiwiman0706-beep/MeishiApp/releases/latest) から入れます。
+3. [Releases](https://github.com/kiwiman0706-beep/Theta.Meishi.Hatch/releases/latest) から入れます。
    - **Windows**：`ThetaMeishiHatch-Setup-<版>.exe` を実行（管理者権限は不要）。署名していないため SmartScreen が出たら「詳細情報」→「実行」。
      以後の更新は自動です（バックグラウンドでダウンロードし、次の起動で入れ替え）。
    - **Mac**：Apple シリコンは `…-mac-arm64.dmg`、Intel は `…-mac-x64.dmg`。`.app` を「アプリケーション」に入れ、

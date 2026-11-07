@@ -8,7 +8,7 @@ fs.cpSync(from, to, { recursive: true });
 
 // Windows checkouts may have CRLF line endings.
 const java = fs
-  .readFileSync(path.resolve(__dirname, "../../android/app/src/main/java/jp/yaegaki/meishinote/Gemini.java"), "utf8")
+  .readFileSync(path.resolve(__dirname, "../../android/app/src/main/java/app/thetahatch/meishi/Gemini.java"), "utf8")
   .replace(/\r\n/g, "\n");
 const literal = (name) => {
   const m = new RegExp(`static final String ${name}\\s*=([\\s\\S]*?);\\n`).exec(java);

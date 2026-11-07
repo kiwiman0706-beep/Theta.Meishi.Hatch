@@ -1,7 +1,7 @@
 {
   "name": "theta-meishi-hatch",
   "productName": "Theta Meishi Hatch",
-  "version": "0.19.0",
+  "version": "1.0.0",
   "description": "Theta Meishi Hatch for Windows / Mac — reads and writes the Theta Vault directly; also serves DeskHatch drawers.",
   "main": "main.js",
   "license": "UNLICENSED",
@@ -25,7 +25,7 @@
     "electron-builder": "25.1.8"
   },
   "build": {
-    "appId": "jp.yaegaki.theta.meishi",
+    "appId": "app.thetahatch.meishi",
     "productName": "Theta Meishi Hatch",
     "files": [
       "main.js",
@@ -82,7 +82,7 @@
     "publish": {
       "provider": "github",
       "owner": "kiwiman0706-beep",
-      "repo": "MeishiApp",
+      "repo": "Theta.Meishi.Hatch",
       "releaseType": "release"
     },
     "artifactName": "ThetaMeishiHatch-${version}-${os}-${arch}.${ext}",
@@ -98,6 +98,6 @@
   "author": "kiwiman0706-beep",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kiwiman0706-beep/MeishiApp.git"
+    "url": "https://github.com/kiwiman0706-beep/Theta.Meishi.Hatch.git"
   }
 }

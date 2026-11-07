@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <!-- Theta Hatch series: apps signed with the same key may lend each other the Gemini key. -->
-<permission android:name="jp.yaegaki.theta.permission.SHARE" android:protectionLevel="signature" android:label="Theta Hatchの設定の受け渡し"/>
-<uses-permission android:name="jp.yaegaki.theta.permission.SHARE"/>
-<queries><intent><action android:name="jp.yaegaki.theta.HATCH"/></intent><package android:name="app.thetahatch.home"/><package android:name="app.thetahatch.kidshome"/><package android:name="jp.yaegaki.theta.home"/><package android:name="com.theta.kidshome"/></queries>
+<permission android:name="app.thetahatch.permission.SHARE" android:protectionLevel="signature" android:label="Theta Hatchの設定の受け渡し"/>
+<uses-permission android:name="app.thetahatch.permission.SHARE"/>
+<queries><intent><action android:name="app.thetahatch.HATCH"/></intent><package android:name="app.thetahatch.home"/><package android:name="app.thetahatch.kidshome"/></queries>
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.READ_CONTACTS"/>
 <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
@@ -13,8 +13,6 @@
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
-<uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"/>
 <uses-feature android:name="android.hardware.camera" android:required="false"/>
 <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 <application android:theme="@style/AppTheme" android:label="Theta Meishi Hatch" android:icon="@drawable/ic_app" android:allowBackup="false" android:supportsRtl="true" android:usesCleartextTraffic="false">
@@ -22,7 +20,7 @@
 <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode"/>
 <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustResize">
 <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-<intent-filter><action android:name="jp.yaegaki.theta.HATCH"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
+<intent-filter><action android:name="app.thetahatch.HATCH"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
 </activity>
 <!-- Moving to the new app ID, run by Theta Home Hatch (MigrationActivity checks the caller's signature). -->
 <activity android:name=".MigrationActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true">
@@ -30,12 +28,11 @@
 </activity>
 <provider android:name=".FilesProvider" android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true"/>
 <service android:name=".RecordingService" android:exported="false" android:foregroundServiceType="microphone"/>
-<provider android:name=".SeriesProvider" android:authorities="${applicationId}.theta" android:exported="true" android:readPermission="jp.yaegaki.theta.permission.SHARE"/>
+<provider android:name=".SeriesProvider" android:authorities="${applicationId}.theta" android:exported="true" android:readPermission="app.thetahatch.permission.SHARE"/>
 <receiver android:name=".RecentWidget" android:exported="true" android:label="最近の名刺">
 <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
 <meta-data android:name="android.appwidget.provider" android:resource="@xml/recent_widget_info"/>
 </receiver>
 <service android:name=".RecentWidget$Service" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS"/>
-<receiver android:name=".UpdateInstaller$Result" android:exported="false"/>
 <service android:name=".ProcessingService" android:exported="false" android:foregroundServiceType="dataSync"/>
 </application></manifest>

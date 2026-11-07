@@ -10,18 +10,18 @@ const dist = path.join(__dirname, "../dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 
 (async () => {
-  // Served under a sub-path, as on GitHub Pages (/MeishiApp/).
+  // Served under a sub-path, as on GitHub Pages (/Theta.Meishi.Hatch/).
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, "http://x");
-    if (!u.pathname.startsWith("/MeishiApp/")) return res.writeHead(404).end();
-    let f = path.join(dist, decodeURIComponent(u.pathname.slice("/MeishiApp/".length)) || "index.html");
+    if (!u.pathname.startsWith("/Theta.Meishi.Hatch/")) return res.writeHead(404).end();
+    let f = path.join(dist, decodeURIComponent(u.pathname.slice("/Theta.Meishi.Hatch/".length)) || "index.html");
     if (f.endsWith(path.sep) || f === dist) f = path.join(dist, "index.html");
     if (!f.startsWith(dist) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return res.writeHead(404).end("not found");
     res.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" });
     fs.createReadStream(f).pipe(res);
   });
   await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
-  const base = `http://localhost:${server.address().port}/MeishiApp/`;
+  const base = `http://localhost:${server.address().port}/Theta.Meishi.Hatch/`;
 
   const exe = ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome"].find((f) => fs.existsSync(f));
   const browser = await chromium.launch(exe ? { executablePath: exe } : {});

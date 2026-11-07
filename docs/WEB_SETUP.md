@@ -1,6 +1,6 @@
 # Web版（iPhone・ブラウザ）の使い方と初期設定
 
-Web版は `https://kiwiman0706-beep.github.io/MeishiApp/` で動く、ホーム画面に置けるWebアプリ（PWA）です。
+Web版は `https://kiwiman0706-beep.github.io/Theta.Meishi.Hatch/` で動く、ホーム画面に置けるWebアプリ（PWA）です。
 App Storeを通さず、iPhoneでもAndroid・PC版と同じ画面とデータ（Googleドライブの Theta Vault）を使えます。
 
 ## 1. iPhoneのホーム画面に置く

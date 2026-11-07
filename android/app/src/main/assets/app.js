@@ -364,9 +364,11 @@ function home() {
             ? upd.ready
               ? "押すと再起動して更新します"
               : "ダウンロードページを開きます"
-            : upd.ready
-              ? "準備できました。押すと更新します（アプリを閉じている間に自動で入ることもあります）"
-              : "押すとダウンロードして更新します"
+            : state.platform
+              ? "押すとダウンロードして更新します"
+              : state.hub
+                ? "押すと Theta Home Hatch で更新します"
+                : "押すとダウンロードページを開きます（Theta Home Hatch があればまとめて更新できます）"
       }</small></span>${icon("next")}</button>`
     : "";
   // Web: Google sign-in lasts about an hour and needs a tap to renew.
@@ -1717,9 +1719,7 @@ function menuPage() {
     menuRow("mail", "年賀状・お便り", "年賀状の送受信、暑中見舞い・カード・手紙", "go('nenga')"),
   ])}${phoneOnly("widget", section("ホーム画面", [
     menuRow("card", "ホーム画面にウィジェットを追加", state.widgets ? `設置済み（${state.widgets}個）・ 最近登録した名刺・開いた名刺` : "最近登録した名刺・開いた名刺を表示", "call('pinWidget')"),
-  ]))}${state.platform ? "" : section("新しいアプリへ", [
-    menuRow("rotate", "新しい Theta Meishi Hatch へ移る", state.hub ? "Theta Home Hatch の「Hatch」の一覧から進めます。名刺・設定・連絡先とのつながりはそのまま移ります" : "Theta Home Hatch から進めます（まだ入っていなければ、押すと入手ページを開きます）", "call('openHub')"),
-  ])}${section("読み取り", [
+  ]))}${section("読み取り", [
     menuRow("spark", "未認識をまとめて読み取る", unread ? unread + "件の名刺が未認識" : "未認識の名刺はありません", "batchRecognize()"),
     state.upgradeQueued
       ? menuRow("clock", "過去の名刺を更新中", `残り${state.upgradeQueued}件 ・ 新しい名刺の読み取りを優先し、1日${state.upgradePerDay || 30}回までで少しずつ ・ 押すと中止`, "if(confirm('残りの更新（読み仮名・ロゴ）を中止しますか？あとでまた実行できます。'))call('cancelUpgrade')")
@@ -1748,7 +1748,7 @@ function menuPage() {
 function geminiPage() {
   if (!settingsDraft)
     settingsDraft = { key: "", model: state.model, format: state.format };
-  return `${backbar("Gemini APIキー・モデル")}<section class="panel"><p class="caption">APIキーはこの端末に暗号化して保存します。バックアップには含めません。</p>${!state.keySet && state.keyLenders?.length ? `<div class="tip"><b>この端末の Theta Hatch アプリのキーを使う</b><br>同じ端末に入っているシリーズのアプリから、登録済みのAPIキーをコピーできます。${state.keyLenders.map((l) => `<button class="outline full gap" onclick="call('importKey',{package:'${esc(l.package)}'})">${icon("spark")}${esc(l.label)} のキーを使う</button>`).join("")}</div>` : ""}<label class="label">Gemini APIキー ${state.keySet ? "・登録済み" : ""}</label><input type="password" autocomplete="off" value="${esc(settingsDraft.key)}" placeholder="${state.keySet ? "変更する時だけ入力" : "AIza…"}" oninput="settingsDraft.key=this.value"><label class="label">モデル名</label><input id="model" value="${esc(settingsDraft.model)}" oninput="settingsDraft.model=this.value" autocomplete="off"><p class="caption">利用可能なモデルはAPIキーごとに異なります。保存後に「モデル一覧」から選べます。</p><details class="gap"><summary class="caption">詳細設定</summary><label class="label">API互換設定（通常は変更不要）</label><select onchange="settingsDraft.format=this.value"><option value="legacy" ${settingsDraft.format === "legacy" ? "selected" : ""}>標準</option><option value="modern" ${settingsDraft.format === "modern" ? "selected" : ""}>新しいモデル向け</option></select><p class="caption">新しいモデルで認識時にエラーが出る場合に切り替えてください。</p></details><div class="row gap"><button class="primary" onclick="saveSettings()">保存</button><button class="outline" onclick="call('models')">モデル一覧</button></div>${state.keySet ? `<button class="danger full gap" onclick="if(confirm('保存しているAPIキーを削除しますか？'))call('settings',{clearKey:true})">APIキーを削除</button>` : ""}</section>${geminiUsage()}<div class="tip">読み取り時に名刺画像をGoogleのGemini APIへ送信します。APIの料金・データ利用条件は、ご自身のプロジェクト設定をご確認ください。</div>`;
+  return `${backbar("Gemini APIキー・モデル")}<section class="panel"><p class="caption">APIキーはこの端末に暗号化して保存します。バックアップには含めません。</p>${!state.keySet && state.keyLenders?.length ? `<div class="tip"><b>この端末の Theta Hatch アプリのキーを使う</b><br>同じ端末に入っているシリーズのアプリから、登録済みのAPIキーをコピーできます。${state.keyLenders.map((l) => `<button class="outline full gap" onclick="call('importKey',{package:'${esc(l.package)}'})">${icon("spark")}${esc(l.label)} ${l.hub ? "の設定を使う" : "のキーを使う"}</button>`).join("")}</div>` : ""}<label class="label">Gemini APIキー ${state.keySet ? "・登録済み" : ""}</label><input type="password" autocomplete="off" value="${esc(settingsDraft.key)}" placeholder="${state.keySet ? "変更する時だけ入力" : "AIza…"}" oninput="settingsDraft.key=this.value"><label class="label">モデル名</label><input id="model" value="${esc(settingsDraft.model)}" oninput="settingsDraft.model=this.value" autocomplete="off"><p class="caption">利用可能なモデルはAPIキーごとに異なります。保存後に「モデル一覧」から選べます。</p><details class="gap"><summary class="caption">詳細設定</summary><label class="label">API互換設定（通常は変更不要）</label><select onchange="settingsDraft.format=this.value"><option value="legacy" ${settingsDraft.format === "legacy" ? "selected" : ""}>標準</option><option value="modern" ${settingsDraft.format === "modern" ? "selected" : ""}>新しいモデル向け</option></select><p class="caption">新しいモデルで認識時にエラーが出る場合に切り替えてください。</p></details><div class="row gap"><button class="primary" onclick="saveSettings()">保存</button><button class="outline" onclick="call('models')">モデル一覧</button></div>${state.keySet ? `<button class="danger full gap" onclick="if(confirm('保存しているAPIキーを削除しますか？'))call('settings',{clearKey:true})">APIキーを削除</button>` : ""}</section>${geminiUsage()}<div class="tip">読み取り時に名刺画像をGoogleのGemini APIへ送信します。APIの料金・データ利用条件は、ご自身のプロジェクト設定をご確認ください。</div>`;
 }
 let editOnOpen = false;
 function manualAdd() {

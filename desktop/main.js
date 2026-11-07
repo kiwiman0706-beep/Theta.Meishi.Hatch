@@ -176,7 +176,7 @@ function imaging(base) {
 // ---- updates (GitHub Releases) ----------------------------------------------------------
 // Windows downloads in the background and installs on restart. The Mac build is not signed by
 // Apple, which Squirrel.Mac requires, so there the app only points to the new download.
-const RELEASES = "https://github.com/kiwiman0706-beep/MeishiApp/releases/latest";
+const RELEASES = "https://github.com/kiwiman0706-beep/Theta.Meishi.Hatch/releases/latest";
 let update = null, // { version, ready }
   onUpdate = () => {};
 function setupUpdates() {

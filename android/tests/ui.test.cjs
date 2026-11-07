@@ -479,11 +479,11 @@ const p = (id, name, company, status = "confirmed") => ({
   calls = await page.evaluate(() => window.calls);
   assert.deepEqual(calls.at(-1), { action: "upgradeAll" });
   // Google Cloud setup guide: opened first when Drive was never authorized; copy / open buttons.
-  await page.evaluate((d) => { onNative({ type: "state", data: { ...d, driveAuthorized: false, appPackage: "jp.yaegaki.meishiclaude", appSha1: "A1:13:EA" } }); go("menu"); }, demo);
+  await page.evaluate((d) => { onNative({ type: "state", data: { ...d, driveAuthorized: false, appPackage: "app.thetahatch.meishi", appSha1: "A1:13:EA" } }); go("menu"); }, demo);
   assert.equal(await page.getByText("Googleアカウント", { exact: true }).count(), 0, "the web-only row stays off Android");
   await page.evaluate(() => syncStart());
   await page.getByRole("heading", { name: /Google連携の初期設定/ }).waitFor();
-  assert(await page.getByText("jp.yaegaki.meishiclaude").isVisible());
+  assert(await page.getByText("app.thetahatch.meishi").isVisible());
   await page.getByRole("button", { name: "コピー" }).nth(1).click();
   calls = await page.evaluate(() => window.calls);
   assert.deepEqual(calls.at(-1), { action: "copyText", text: "A1:13:EA" });
@@ -640,10 +640,10 @@ const p = (id, name, company, status = "confirmed") => ({
   assert.deepEqual(calls.at(-1), { action: "seriesFollow", key: "calendar", on: true });
   await page.evaluate(() => closeModal());
   // No key yet, another app of the series on the phone has one: offered on the Gemini page.
-  await page.evaluate((d) => { onNative({ type: "state", data: { ...d, keySet: false, keyLenders: [{ package: "jp.yaegaki.theta.recipe", label: "Theta Recipe Hatch" }] } }); settingsDraft = null; go("gemini"); }, demo);
+  await page.evaluate((d) => { onNative({ type: "state", data: { ...d, keySet: false, keyLenders: [{ package: "app.thetahatch.recipe", label: "Theta Recipe Hatch" }] } }); settingsDraft = null; go("gemini"); }, demo);
   await page.getByRole("button", { name: /Theta Recipe Hatch のキーを使う/ }).click();
   calls = await page.evaluate(() => window.calls);
-  assert.deepEqual(calls.at(-1), { action: "importKey", package: "jp.yaegaki.theta.recipe" });
+  assert.deepEqual(calls.at(-1), { action: "importKey", package: "app.thetahatch.recipe" });
   await page.evaluate((d) => { onNative({ type: "state", data: d }); go("home"); }, demo);
   // HTML injection in content must be rendered as text.
   demo.people[0].name = '<img src=x onerror="window.pwned=true">';

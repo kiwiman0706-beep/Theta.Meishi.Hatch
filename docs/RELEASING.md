@@ -26,7 +26,7 @@ GitHub Actions（`.github/workflows/release.yml`）が、テスト → Android A
 
 | 名前 | 中身 |
 | --- | --- |
-| `ANDROID_KEYSTORE_B64` | 署名鍵 `meishiclaude-release.jks` をBase64にした文字列（Mac：`base64 -i meishiclaude-release.jks`、Windows PowerShell：`[Convert]::ToBase64String([IO.File]::ReadAllBytes("meishiclaude-release.jks"))`） |
+| `ANDROID_KEYSTORE_B64` | シリーズ共通の署名鍵（Theta.Hatch.Series の `secrets/README.md`）をBase64にした文字列（Mac：`base64 -i meishiclaude-release.jks`、Windows PowerShell：`[Convert]::ToBase64String([IO.File]::ReadAllBytes("meishiclaude-release.jks"))`） |
 | `ANDROID_KEYSTORE_PASSWORD` | 署名鍵のパスワード（`keystore-password.txt` の中身） |
 
 未設定でもリリースは作られますが、APKは付きません。設定後にそのタグのワークフローを「Re-run all jobs」すると、APKが追加されます。

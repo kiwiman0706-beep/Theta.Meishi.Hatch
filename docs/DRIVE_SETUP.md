@@ -25,14 +25,14 @@ Theta Meishi HatchがGoogle DriveのScanSnapフォルダを読み、取り込み
 
 1. 「クライアント」（または「認証情報」→「認証情報を作成」→「OAuthクライアントID」）。
 2. アプリケーションの種類：**Android**
-3. パッケージ名：`jp.yaegaki.meishiclaude`
+3. パッケージ名：`app.thetahatch.meishi`
 4. SHA-1証明書フィンガープリント：
 
    ```
    A1:13:EA:34:83:60:56:32:E7:F5:94:4E:4E:8C:20:55:DD:AE:28:BA
    ```
 
-   （アプリの署名鍵 `meishiclaude-release.jks` のものです。鍵を作り直した場合は `keytool -list -v -keystore meishiclaude-release.jks` で表示されるSHA1に変えてください。）
+   （シリーズ共通の署名鍵のものです。Theta.Hatch.Series の `secrets/README.md`。鍵を作り直した場合は `keytool -list -v -keystore meishiclaude-release.jks` で表示されるSHA1に変えてください。）
 5. 作成。クライアントIDをアプリに入力する必要はありません（パッケージ名と署名でGoogle側が判別します）。
 
 反映まで数分かかることがあります。

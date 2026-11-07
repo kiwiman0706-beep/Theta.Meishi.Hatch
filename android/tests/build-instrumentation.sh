@@ -24,4 +24,4 @@ import zipfile
 with zipfile.ZipFile('build/test/unsigned.apk','a') as z:z.write('build/test/dex/classes.dex','classes.dex')
 PY
 "$BT/zipalign" -f -p 4 build/test/unsigned.apk build/test/aligned.apk
-"$BT/apksigner" sign --ks ../private-signing/meishinote-release.jks --ks-key-alias meishinote --ks-pass file:../private-signing/keystore-password.txt --out build/test/tests.apk build/test/aligned.apk
+"$BT/apksigner" sign --ks "${SIGNING_FILE:-../private-signing/theta-hatch-release.jks}" --ks-key-alias "${ANDROID_KEY_ALIAS:?set ANDROID_KEY_ALIAS}" --ks-pass "file:${SIGNING_PASS_FILE:-../private-signing/keystore-password.txt}" --out build/test/tests.apk build/test/aligned.apk

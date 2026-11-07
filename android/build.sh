@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 if [[ -z "$SDK_DIR" ]]; then echo 'Set ANDROID_SDK_ROOT to your Android SDK directory.' >&2; exit 1; fi
 BUILD_TOOLS="$SDK_DIR/build-tools/35.0.0"
-SIGNING_FILE="${SIGNING_FILE:-../private-signing/meishiclaude-release.jks}"
+SIGNING_FILE="${SIGNING_FILE:-../private-signing/theta-hatch-release.jks}"
 SIGNING_PASS_FILE="${SIGNING_PASS_FILE:-../private-signing/keystore-password.txt}"
 SIGNING_KEY_PASS_FILE="${SIGNING_KEY_PASS_FILE:-$SIGNING_PASS_FILE}"
 if [[ -z "${ANDROID_KEY_ALIAS:-}" ]]; then echo 'Set ANDROID_KEY_ALIAS to the signing key alias.' >&2; exit 1; fi

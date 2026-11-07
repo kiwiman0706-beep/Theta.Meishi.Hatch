@@ -1,4 +1,4 @@
-package jp.yaegaki.meishinote.tests;
+package app.thetahatch.meishi.tests;
 
 import android.app.Instrumentation;
 import android.content.Context;
@@ -9,7 +9,7 @@ import android.os.Bundle;
 import java.io.*;
 import java.util.*;
 import java.util.zip.*;
-import jp.yaegaki.meishinote.*;
+import app.thetahatch.meishi.*;
 import org.json.*;
 
 public class Smoke extends Instrumentation {

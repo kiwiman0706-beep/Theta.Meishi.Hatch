@@ -1,5 +1,15 @@
 # 開発引き継ぎ
 
+## 1.0.0（新しいアプリ ID `app.thetahatch.meishi`）
+
+- シリーズの名前・ID に合わせた版（Theta.Hatch.Series `progress/meishi.md`）。0.19.0（古い ID の橋渡し版）から Theta Home Hatch が移す（EXPORT → 1.0.0 を入れる → IMPORT → 古いアプリの削除）。
+- Java のパッケージも `app.thetahatch.meishi`。権限 `app.thetahatch.permission.SHARE`、action `app.thetahatch.HATCH`。デスクトップの appId も `app.thetahatch.meishi`（Windows では別のアプリとして入るので、古い版は手で削除）。
+- 更新はハブに頼む（spec §6.1）：`REQUEST_INSTALL_PACKAGES`・`UPDATE_PACKAGES_WITHOUT_USER_ACTION`・`UpdateInstaller` を外した。`UpdateCheck` は帯のためだけ（`Theta.Meishi.Hatch` の Releases）。「更新する」は `Intent("app.thetahatch.action.UPDATE")`（extra `packageName`）をハブへ、無ければ Releases を開く。
+- 設定のハブ（`Hub`）：`content://<hub>.theta/info`（key・value・by・at）。開くたびに `Series.fromHub` で、シリーズに合わせる項目（`gemini.model`・`google.account`）のうちハブの方が新しいものを取り込む。こちらで変えたら `Hub.tell` で書き戻す。Gemini キーは「Theta Home Hatch の設定を使う」で `secret/gemini.key`。
+- Google 連絡先の印：新しい MIME（`vnd.app.thetahatch.meishi`）で書き、古い印も読む（`Contacts.OLD_MARKER`）。
+- シリーズ共通仕様の写し（`docs/THETA_*.md`）は Theta.Hatch.Series への案内だけにし、`tools/hatch-kit` は削除（シリーズのリポジトリが正本）。`CLAUDE.md` を追加。
+- Web 版の URL は `https://kiwiman0706-beep.github.io/Theta.Meishi.Hatch/`（オリジンは同じなので OAuth クライアントはそのまま。ホーム画面のアイコンは入れ直し）。
+
 ## 0.19.0（新しいアプリ ID への橋渡し版）
 
 - シリーズの移行（Theta.Hatch.Series `docs/MIGRATION.md` §3、進み具合は `progress/meishi.md`）。移行は Theta Home Hatch がまとめて行う。この版は古い ID（`jp.yaegaki.meishiclaude`）のまま、今のアプリ内更新で入る。

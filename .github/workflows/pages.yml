@@ -1,4 +1,4 @@
-# The web version (PWA, for iPhone) on GitHub Pages: https://kiwiman0706-beep.github.io/MeishiApp/
+# The web version (PWA, for iPhone) on GitHub Pages: https://kiwiman0706-beep.github.io/Theta.Meishi.Hatch/
 # Built from web/ (with the shared UI in android/ and the backend in desktop/lib) on every push.
 # Needs Settings → Pages → Source: "GitHub Actions" (once).
 name: Web (GitHub Pages)
@@ -11,7 +11,7 @@ on:
       - "desktop/lib/**"
       - "desktop/scripts/sync-ui.js"
       - "android/app/src/main/assets/**"
-      - "android/app/src/main/java/jp/yaegaki/meishinote/Gemini.java"
+      - "android/app/src/main/java/app/thetahatch/meishi/Gemini.java"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
