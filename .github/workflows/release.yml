@@ -1,14 +1,20 @@
-# Push a tag like v0.14.0, or run it by hand (Actions → Release → Run workflow: the tag is made
-# from the version in the files) → tests, then the Android APK, the Windows installer and the Mac
-# builds, published together as one GitHub Release (the apps check it for updates).
+# Raise the version (android/app/build.gradle, desktop/ and web/package.json, docs/releases/
+# v<version>.md) and push to the default branch: when there is no tag v<version> yet, this makes
+# the tag and the Release (series spec §6.1 #2). Pushes without a new version do nothing.
+# Also runs for a pushed tag like v0.14.0, or by hand (Actions → Release → Run workflow)
+# → tests, then the Android APK, the Windows installer and the Mac builds, published together as
+# one GitHub Release (the apps check it for updates).
 # Run by hand with "ref", an earlier commit is built and released (e.g. a bridge version kept
 # behind newer work on the branch).
 # The APK is signed only when the repository secrets ANDROID_KEYSTORE_B64 and
-# ANDROID_KEYSTORE_PASSWORD are set (see docs/RELEASING.md).
+# ANDROID_KEYSTORE_PASSWORD are set (see docs/RELEASING.md). GitHub's own token cannot make a tag
+# on a commit that changes .github/workflows: a RELEASE_TOKEN secret (a personal token with
+# Contents and Workflows write) is used instead when set.
 name: Release
 
 on:
   push:
+    branches: ["**"] # only the default branch releases (checked below)
     tags: ["v*"]
   workflow_dispatch:
     inputs:
@@ -30,23 +36,50 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       tag: ${{ steps.v.outputs.tag }}
+      go: ${{ steps.new.outputs.go }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: "${{ inputs.ref || github.sha }}" }
       - id: v
-        name: Tag, Android and desktop versions agree
+        name: Version (tag, Android and desktop agree?)
         run: |
           android="$(sed -n "s/.*versionName '\(.*\)'.*/\1/p" android/app/build.gradle)"
           desktop="$(node -p 'require("./desktop/package.json").version')"
           if [ "$GITHUB_REF_TYPE" = tag ]; then tag="${GITHUB_REF_NAME#v}"; else tag="$android"; fi
           echo "tag=$tag android=$android desktop=$desktop"
-          test "$tag" = "$android" && test "$tag" = "$desktop"
-          test -f "docs/releases/v$tag.md"
+          ok=true
+          { test "$tag" = "$android" && test "$tag" = "$desktop" && test -f "docs/releases/v$tag.md"; } || ok=false
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
           echo "version=$tag" >> "$GITHUB_OUTPUT"
           echo "tag=v$tag" >> "$GITHUB_OUTPUT"
+      - id: new
+        name: Is there something to release?
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+          OK: ${{ steps.v.outputs.ok }}
+        run: |
+          go=true
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ]; then
+            # A push to a branch releases only on the default branch, and only a version not yet tagged.
+            if [ "$GITHUB_REF_NAME" != "$DEFAULT" ]; then go=false
+            elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then go=false; fi
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            # A tag made by this workflow (with RELEASE_TOKEN) starts it again: done when the APK is there.
+            if gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | grep -q '\.apk$'; then go=false; fi
+          fi
+          echo "go=$go"
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+          # Only a release needs the versions to agree and its notes (docs/releases/v<version>.md).
+          if [ "$go" = true ] && [ "$OK" != true ]; then
+            echo "::error::The versions of android/app/build.gradle and desktop/package.json differ (or from the tag), or docs/releases/$TAG.md is missing"
+            exit 1
+          fi
 
   test:
     needs: check
+    if: needs.check.outputs.go == 'true'
     runs-on: ubuntu-24.04 # Playwright does not run on 26.04 yet
     steps:
       - uses: actions/checkout@v4
@@ -163,7 +196,7 @@ jobs:
         with: { path: out, merge-multiple: true }
       - name: Publish
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           TAG: ${{ needs.check.outputs.tag }}
         run: |
           ls -la out
