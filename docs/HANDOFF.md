@@ -1,5 +1,12 @@
 # 開発引き継ぎ
 
+## 1.1.0（「撮って登録」の入口）
+
+- シリーズ spec §6.2 の `SCAN`：`ScanActivity`（`MainActivity` を継承しただけ。exported、`app.thetahatch.action.SCAN`＋`category.DEFAULT`、権限なし、launchMode は標準）。MainActivity は singleTask で結果を返せないため、呼んだ側が結果を待てるように別のアクティビティにした。
+- 受けたら（`fromWidget` → `scanCall`、extra `source`・`mode`）すぐ `quickScan`（名刺スキャナー）か、`mode=pick` なら `pick`（画像・PDF を選ぶ）。取り込んだ名刺（`scanIds`）を開き、読み取りが済んだら `scanReview` で確認画面（`review` イベント）を出す。確認して「確認済みで保存」したら `finishScan(true)`（処理中・ダイアログ中はそれが終わるのを待つ）→ `RESULT_OK`。
+- やめたとき：スキャナー・画像選びを閉じた（まだ何も取っていない）、または一覧・詳細で戻る（app.js の `handleBack` → `scanDone`）→ `RESULT_CANCELED`。撮った名刺は未確認のまま残る。
+- 版を上げて push すると Release が自動でできる（`release.yml`、`docs/RELEASING.md`）。
+
 ## 1.0.0（新しいアプリ ID `app.thetahatch.meishi`）
 
 - シリーズの名前・ID に合わせた版（Theta.Hatch.Series `progress/meishi.md`）。0.19.0（古い ID の橋渡し版）から Theta Home Hatch が移す（EXPORT → 1.0.0 を入れる → IMPORT → 古いアプリの削除）。

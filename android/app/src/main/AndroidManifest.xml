@@ -22,6 +22,10 @@
 <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
 <intent-filter><action android:name="app.thetahatch.HATCH"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
 </activity>
+<!-- "撮って登録" from Theta Home Hatch and others (series spec §6.2 SCAN). No permission: it only opens the camera here. -->
+<activity android:name=".ScanActivity" android:exported="true" android:excludeFromRecents="true" android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustResize">
+<intent-filter><action android:name="app.thetahatch.action.SCAN"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>
+</activity>
 <!-- Moving to the new app ID, run by Theta Home Hatch (MigrationActivity checks the caller's signature). -->
 <activity android:name=".MigrationActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true">
 <intent-filter><action android:name="app.thetahatch.action.EXPORT"/><action android:name="app.thetahatch.action.IMPORT"/><category android:name="android.intent.category.DEFAULT"/></intent-filter>

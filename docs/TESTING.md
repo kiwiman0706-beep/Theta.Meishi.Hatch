@@ -1,3 +1,11 @@
+# 1.1.0 検証記録
+
+- Robolectric（`ScanActivityTest`）：SCAN で開くと `source`・`mode` を受け取り、`pick` なら画像選びから始める、戻る（`scanDone`）で `RESULT_CANCELED` で閉じる、普通に開いた Meishi はこのモードにならない。JVM 67 件。
+- 出来上がった APK の Manifest（aapt）：`ScanActivity` が `exported`、`app.thetahatch.action.SCAN`＋`category.DEFAULT`、権限なし（Robolectric は暗黙の Intent の引き当てを再現しないので APK で確認）。
+- 実機で未確認：Home の PEOPLE タブの「名刺を撮る（Meishi）」→ スキャナー → 読み取り → 確認画面が自動で開く → 保存で Home に戻る（`RESULT_OK`）、途中でやめたとき Home に戻る（`RESULT_CANCELED`）、`mode=pick`。
+
+---
+
 # 1.0.0 検証記録
 
 - JVM 65件：移行の往復（`MigrationTest`：名刺・画像・年賀状の画像・手書き・連絡先と予定の行・設定、Gemini キーは移らない、Vault から先に戻った名刺には端末だけの項目を足す、普通のバックアップは連絡先の行を入れない、結果を受け取らない呼び出しは断る）、ハブ（`HubTest`：偽の Home で、新しいモデルを取り込む・こちらの変更を書き戻す・古い値は取り込まない・「このアプリだけ」は取り込まない・キーの受け取り）。画面テスト、デスクトップ 34件、Web 9件、Electron 起動。

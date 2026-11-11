@@ -1820,6 +1820,12 @@ window.handleBack = () => {
     go("menu");
     return;
   }
+  // Opened by another series app to take one card ("撮って登録"): back from the card or the list
+  // returns to it.
+  if (state.scanCall && (route === "detail" || route === "home")) {
+    call("scanDone", { ok: false });
+    return;
+  }
   if (route === "detail" || route === "menu") {
     go("home");
     return;

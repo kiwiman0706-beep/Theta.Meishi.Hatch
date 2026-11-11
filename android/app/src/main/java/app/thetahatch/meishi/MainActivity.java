@@ -306,9 +306,21 @@ public class MainActivity extends Activity {
   String launch = "";
   long widgetSeen = -1;
 
+  // "撮って登録" from another series app (ScanActivity, series spec §6.2 SCAN): this screen opens
+  // the camera (or the picker), and closes with RESULT_OK once the card is saved, else RESULT_CANCELED.
+  public static final String ACTION_HATCH_SCAN = "app.thetahatch.action.SCAN";
+  boolean scanCall;
+  String scanFrom = "";
+  final Set<String> scanIds = new LinkedHashSet<>();
+  boolean scanReviewSent, scanFinishing;
+
   void fromWidget(Intent i) {
     if (i == null) return;
-    if (RecentWidget.ACTION_SCAN.equals(i.getAction())) launch = "scan";
+    if (ACTION_HATCH_SCAN.equals(i.getAction())) {
+      scanCall = true;
+      scanFrom = i.getStringExtra("source") == null ? "" : i.getStringExtra("source");
+      launch = "pick".equals(i.getStringExtra("mode")) ? "scanPick" : "scan";
+    } else if (RecentWidget.ACTION_SCAN.equals(i.getAction())) launch = "scan";
     else if (i.getStringExtra(RecentWidget.EXTRA_OPEN) != null) launch = "open:" + i.getStringExtra(RecentWidget.EXTRA_OPEN);
     else return;
     if (ready) runLaunch();
@@ -319,6 +331,7 @@ public class MainActivity extends Activity {
     launch = "";
     try {
       if (l.equals("scan")) handle("quickScan", new JSONObject());
+      else if (l.equals("scanPick")) handle("pick", new JSONObject().put("mode", "file").put("id", ""));
       else if (l.startsWith("open:")) event("open", l.substring(5));
     } catch (Exception e) {
       error(e);
@@ -334,6 +347,7 @@ public class MainActivity extends Activity {
 
   void refresh() {
     try {
+      scanReview(); // before the state, which then opens the review (pendingEdit in app.js)
       if (store.changedAt != widgetSeen) {
         widgetSeen = store.changedAt;
         RecentWidget.update(this);
@@ -379,6 +393,7 @@ public class MainActivity extends Activity {
           .put("processing", ProcessingService.running ? ProcessingService.status : "")
           .put("lastReport", prefs().getString("lastReport", ""))
           .put("geminiLog", Gemini.log(this))
+          .put("scanCall", scanCall)
           .put("hub", hubPackage())
           .put("upgradeQueued", Pipeline.upgradeQueued(store))
           .put("upgradePerDay", Pipeline.UPGRADE_PER_DAY)
@@ -444,6 +459,44 @@ public class MainActivity extends Activity {
     Pipeline.enqueue(store, list, "recognize");
     startProcessing();
     event("queued", imported);
+    if (scanCall && !list.isEmpty()) {
+      scanIds.addAll(list);
+      event("open", list.get(0)); // its review opens by itself once it is read (refresh)
+    }
+  }
+
+  // The card(s) taken for the caller are read: open the review of the first one, once.
+  void scanReview() {
+    if (!scanCall || scanReviewSent || scanIds.isEmpty()) return;
+    try {
+      String id = scanIds.iterator().next();
+      JSONObject p = store.person(id);
+      if (!p.optString("queue").equals("recognize") && p.optString("status").equals("review")) {
+        scanReviewSent = true;
+        event("review", id);
+      }
+    } catch (Exception gone) {
+      scanIds.clear();
+    }
+  }
+
+  // Back to the app that asked (after any dialog or work in progress has ended).
+  void finishScan(boolean ok) {
+    if (!scanCall || scanFinishing) return;
+    scanFinishing = true;
+    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+    Runnable[] tryNow = new Runnable[1];
+    long until = System.currentTimeMillis() + 120000;
+    tryNow[0] =
+        () -> {
+          if ((busy || scannerLoading != null || pending.length() > 0) && System.currentTimeMillis() < until) {
+            h.postDelayed(tryNow[0], 400);
+            return;
+          }
+          setResult(ok ? RESULT_OK : RESULT_CANCELED);
+          finish();
+        };
+    h.post(tryNow[0]);
   }
 
   void startProcessing() {
@@ -712,6 +765,11 @@ public class MainActivity extends Activity {
       RecentWidget.opened(this, q.optString("id"));
       return;
     }
+    if (action.equals("scanDone")) {
+      // Left the "撮って登録" screen with back: nothing was saved for the caller.
+      finishScan(q.optBoolean("ok"));
+      return;
+    }
     if (action.equals("stopRecord")) {
       startService(new Intent(this, RecordingService.class).setAction("stop"));
       return;
@@ -763,6 +821,7 @@ public class MainActivity extends Activity {
           }
           refresh();
           event("saved", id);
+          if (scanCall && scanIds.contains(id) && store.person(id).optString("status").equals("confirmed")) finishScan(true);
           if (p.has("driveFiles")) startProcessing(); // the Drive file follows the new name
           // Edits reach the Google contact this app created; unregistered people can opt in.
           if (Contacts.registered(this, p))
@@ -1959,6 +2018,8 @@ public class MainActivity extends Activity {
     if (result != RESULT_OK) {
       if (request == CAMERA && !q.optString("cameraFile").isEmpty())
         new File(getCacheDir(), q.optString("cameraFile")).delete();
+      // "撮って登録" closed before a card was taken: back to the caller.
+      if (scanCall && scanIds.isEmpty() && (request == SCAN || request == PICK)) finishScan(false);
       return;
     }
     try {
